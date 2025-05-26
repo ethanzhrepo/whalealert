@@ -140,13 +140,22 @@ class MessageDeduplicator:
             
             # 重建索引
             if self.message_records and self.faiss_index is not None:
-                vectors = np.array([record.vector for record in self.message_records])
-                self.faiss_index.add(vectors)
-                
-                # 重建映射
-                self.message_index_map = {
-                    record.message_id: i for i, record in enumerate(self.message_records)
-                }
+                try:
+                    vectors = np.array([record.vector for record in self.message_records])
+                    self.faiss_index.add(vectors.astype(np.float32))
+                    logger.debug(f"从缓存重建FAISS索引完成，包含 {len(self.message_records)} 个向量")
+                    
+                    # 重建映射
+                    self.message_index_map = {
+                        record.message_id: i for i, record in enumerate(self.message_records)
+                    }
+                except Exception as e:
+                    logger.error(f"从缓存重建FAISS索引失败: {e}")
+                    # 清空有问题的缓存数据
+                    self.message_records = []
+                    self.message_index_map = {}
+                    if self.vector_dimension:
+                        self.faiss_index = faiss.IndexFlatIP(self.vector_dimension)
             
             logger.info(f"缓存加载完成: {len(self.message_records)} 条记录")
             
@@ -235,10 +244,19 @@ class MessageDeduplicator:
             self.message_records = valid_records
             
             # 重建FAISS索引
-            if valid_records and self.faiss_index is not None:
+            if self.faiss_index is not None:
                 self.faiss_index.reset()
-                vectors = np.array([record.vector for record in valid_records])
-                self.faiss_index.add(vectors)
+                
+                if valid_records:
+                    try:
+                        vectors = np.array([record.vector for record in valid_records])
+                        self.faiss_index.add(vectors.astype(np.float32))
+                        logger.debug(f"FAISS索引重建完成，包含 {len(valid_records)} 个向量")
+                    except Exception as e:
+                        logger.error(f"重建FAISS索引失败: {e}")
+                        # 重新初始化空索引
+                        if self.vector_dimension:
+                            self.faiss_index = faiss.IndexFlatIP(self.vector_dimension)
                 
                 # 重建映射
                 self.message_index_map = {
@@ -297,16 +315,50 @@ class MessageDeduplicator:
         
         # 使用FAISS搜索最相似的向量
         try:
+            # 检查FAISS索引状态
+            if self.faiss_index is None:
+                logger.error("FAISS索引未初始化")
+                return False, None, 0.0
+            
+            # 检查索引中的向量数量
+            if self.faiss_index.ntotal == 0:
+                logger.debug("FAISS索引为空，无法进行相似度搜索")
+                return False, None, 0.0
+            
+            # 检查向量维度
+            if vector.shape[0] != self.vector_dimension:
+                logger.error(f"向量维度不匹配: 期望{self.vector_dimension}, 实际{vector.shape[0]}")
+                return False, None, 0.0
+            
+            k = min(10, len(self.message_records), self.faiss_index.ntotal)
+            if k <= 0:
+                logger.debug("没有可搜索的向量")
+                return False, None, 0.0
+            
             similarities, indices = self.faiss_index.search(
                 vector.reshape(1, -1).astype(np.float32), 
-                k=min(10, len(self.message_records))  # 搜索最相似的10条
+                k=k
             )
+            
+            # 检查搜索结果
+            if similarities.shape[0] == 0 or indices.shape[0] == 0:
+                logger.debug("FAISS搜索返回空结果")
+                return False, None, 0.0
+            
+            if similarities.shape[1] == 0 or indices.shape[1] == 0:
+                logger.debug("FAISS搜索未找到任何相似向量")
+                return False, None, 0.0
             
             max_similarity = 0.0
             most_similar_record = None
             
             for similarity, idx in zip(similarities[0], indices[0]):
                 if idx == -1:  # FAISS返回-1表示无效索引
+                    continue
+                
+                # 检查索引是否在有效范围内
+                if idx >= len(self.message_records):
+                    logger.warning(f"FAISS返回的索引超出范围: {idx} >= {len(self.message_records)}")
                     continue
                 
                 record = self.message_records[idx]
@@ -385,7 +437,17 @@ class MessageDeduplicator:
             
             # 添加到FAISS索引
             if self.faiss_index is not None:
-                self.faiss_index.add(vector.reshape(1, -1).astype(np.float32))
+                try:
+                    # 检查向量维度
+                    if vector.shape[0] != self.vector_dimension:
+                        logger.error(f"向量维度不匹配: 期望{self.vector_dimension}, 实际{vector.shape[0]}")
+                        return False
+                    
+                    self.faiss_index.add(vector.reshape(1, -1).astype(np.float32))
+                    logger.debug(f"向量已添加到FAISS索引，当前索引大小: {self.faiss_index.ntotal}")
+                except Exception as e:
+                    logger.error(f"添加向量到FAISS索引失败: {e}")
+                    return False
             
             self.stats['total_messages'] += 1
             
