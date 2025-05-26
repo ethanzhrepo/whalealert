@@ -1,0 +1,66 @@
+# NATS 消息队列配置
+nats:
+  enabled: true  # 是否启用 NATS
+  servers: 
+    - 'nats://localhost:4222'  # NATS 服务器地址
+  subject: 
+    - 'telegram.messages'  # Telegram消息主题
+    - 'twitter.messages'   # Twitter消息主题
+  notification_subject: 'messages.notification'  # 通知消息主题
+
+# LLM 配置
+llm:
+  provider: 'ollama'  # 支持: ollama, openai, anthropic
+  
+  # Ollama 配置
+  ollama:
+    base_url: 'http://localhost:11434'
+    model: 'llama3.1:8b'  # 模型名称
+    temperature: 0.1
+    timeout: 30
+  
+  # OpenAI 配置
+  openai:
+    api_key: 'your-openai-api-key'
+    model: 'gpt-4o-mini'
+    temperature: 0.1
+    max_tokens: 1000
+    timeout: 30
+  
+  # Anthropic 配置
+  anthropic:
+    api_key: 'your-anthropic-api-key'
+    model: 'claude-3-haiku-20240307'
+    temperature: 0.1
+    max_tokens: 1000
+    timeout: 30
+
+# 消息去重配置
+deduplication:
+  enabled: true  # 是否启用消息去重
+  model_name: 'BAAI/bge-m3'  # 句向量模型名称
+  similarity_threshold: 0.85  # 相似度阈值 (0.0-1.0)
+  time_window_hours: 2  # 时间窗口（小时）
+  max_cache_size: 10000  # 最大缓存大小
+  cache_file: 'message_cache.pkl'  # 缓存文件路径
+
+# Agent 配置
+agents:
+  sentiment_analysis:
+    enabled: true
+    name: '情绪分析Agent'
+    description: '分析币圈新闻的市场情绪'
+  
+  # 预留其他agent配置
+  # price_analysis:
+  #   enabled: false
+  #   name: '价格分析Agent'
+  # 
+  # risk_assessment:
+  #   enabled: false
+  #   name: '风险评估Agent'
+
+# 日志配置
+logging:
+  level: 'INFO'  # DEBUG, INFO, WARNING, ERROR
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'

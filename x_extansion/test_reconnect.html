@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NATS重连功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f8fa;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #1da1f2;
+            margin-bottom: 24px;
+        }
+        
+        .status-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-connected { background: #17bf63; }
+        .status-disconnected { background: #e0245e; }
+        .status-reconnecting { 
+            background: #ffad1f; 
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .btn {
+            background: #1da1f2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            margin: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            background: #1991db;
+        }
+        
+        .btn-danger {
+            background: #e0245e;
+        }
+        
+        .btn-danger:hover {
+            background: #c91e4a;
+        }
+        
+        .log {
+            background: #14171a;
+            color: #ffffff;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+        
+        .log-entry {
+            margin-bottom: 4px;
+        }
+        
+        .log-timestamp {
+            color: #657786;
+        }
+        
+        .log-info { color: #1da1f2; }
+        .log-success { color: #17bf63; }
+        .log-warning { color: #ffad1f; }
+        .log-error { color: #e0245e; }
+        
+        .config-section {
+            margin-bottom: 24px;
+        }
+        
+        .input-group {
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 NATS重连功能测试</h1>
+        
+        <div class="config-section">
+            <h3>NATS配置</h3>
+            <div class="input-group">
+                <label>NATS服务器URL:</label>
+                <input type="text" id="natsUrl" value="ws://localhost:4222" placeholder="ws://localhost:4222">
+            </div>
+            <div class="input-group">
+                <label>测试主题:</label>
+                <input type="text" id="testSubject" value="test.reconnect" placeholder="test.reconnect">
+            </div>
+        </div>
+        
+        <div class="status-section">
+            <h3>连接状态</h3>
+            <div class="status-item">
+                <div class="status-indicator status-disconnected" id="connectionStatus"></div>
+                <span id="connectionText">未连接</span>
+            </div>
+            <div class="status-item">
+                <span>重连次数: <strong id="reconnectCount">0</strong></span>
+            </div>
+            <div class="status-item">
+                <span>最大重连次数: <strong id="maxReconnectCount">10</strong></span>
+            </div>
+            <div class="status-item">
+                <span>自动重连: <strong id="autoReconnectStatus">启用</strong></span>
+            </div>
+        </div>
+        
+        <div>
+            <button class="btn" onclick="connect()">连接</button>
+            <button class="btn btn-danger" onclick="disconnect()">断开</button>
+            <button class="btn" onclick="sendTestMessage()">发送测试消息</button>
+            <button class="btn" onclick="clearLog()">清空日志</button>
+        </div>
+        
+        <div class="log" id="logContainer">
+            <div class="log-entry">
+                <span class="log-timestamp">[等待操作]</span>
+                <span class="log-info">点击"连接"开始测试NATS重连功能</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 导入工具类
+        const script = document.createElement('script');
+        script.src = 'utils.js';
+        document.head.appendChild(script);
+        
+        let natsConnection = null;
+        let messageCount = 0;
+        
+        script.onload = function() {
+            log('info', '工具类加载完成');
+        };
+        
+        function log(level, message) {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span class="log-${level}">${message}</span>
+            `;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function updateStatus(connected, reconnecting = false, reconnectAttempts = 0) {
+            const statusIndicator = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('connectionText');
+            const reconnectCountEl = document.getElementById('reconnectCount');
+            
+            statusIndicator.className = 'status-indicator';
+            
+            if (connected) {
+                statusIndicator.classList.add('status-connected');
+                statusText.textContent = '已连接';
+            } else if (reconnecting) {
+                statusIndicator.classList.add('status-reconnecting');
+                statusText.textContent = '重连中...';
+            } else {
+                statusIndicator.classList.add('status-disconnected');
+                statusText.textContent = '未连接';
+            }
+            
+            reconnectCountEl.textContent = reconnectAttempts;
+        }
+        
+        async function connect() {
+            try {
+                const url = document.getElementById('natsUrl').value;
+                
+                if (natsConnection) {
+                    natsConnection.disconnect();
+                }
+                
+                log('info', `尝试连接到 ${url}`);
+                
+                natsConnection = new NATSConnection();
+                
+                // 设置连接状态回调
+                natsConnection.setConnectionChangeCallback((connected) => {
+                    if (connected) {
+                        log('success', 'NATS连接成功');
+                        updateStatus(true);
+                    } else {
+                        log('warning', 'NATS连接断开');
+                        updateStatus(false);
+                    }
+                });
+                
+                // 监控重连状态
+                const originalScheduleReconnect = natsConnection.scheduleReconnect;
+                natsConnection.scheduleReconnect = function() {
+                    const status = this.getStatus();
+                    log('warning', `开始重连... (第${status.reconnectAttempts + 1}次/${status.maxReconnectAttempts})`);
+                    updateStatus(false, true, status.reconnectAttempts + 1);
+                    return originalScheduleReconnect.call(this);
+                };
+                
+                await natsConnection.connect([url]);
+                log('success', '连接建立成功');
+                updateStatus(true);
+                
+            } catch (error) {
+                log('error', `连接失败: ${error.message}`);
+                updateStatus(false);
+            }
+        }
+        
+        function disconnect() {
+            if (natsConnection) {
+                log('info', '手动断开连接');
+                natsConnection.disconnect();
+                natsConnection = null;
+                updateStatus(false);
+            } else {
+                log('warning', '没有活动连接');
+            }
+        }
+        
+        async function sendTestMessage() {
+            if (!natsConnection || !natsConnection.connected) {
+                log('error', '未连接到NATS服务器');
+                return;
+            }
+            
+            try {
+                const subject = document.getElementById('testSubject').value;
+                const message = {
+                    type: 'test.message',
+                    timestamp: Date.now(),
+                    count: ++messageCount,
+                    data: `测试消息 #${messageCount}`
+                };
+                
+                await natsConnection.publish(subject, JSON.stringify(message));
+                log('success', `消息已发送: ${subject} - ${message.data}`);
+                
+            } catch (error) {
+                log('error', `发送消息失败: ${error.message}`);
+            }
+        }
+        
+        function clearLog() {
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = '<div class="log-entry"><span class="log-timestamp">[日志已清空]</span><span class="log-info">准备记录新的日志</span></div>';
+        }
+        
+        // 页面加载完成后的初始化
+        window.addEventListener('load', function() {
+            log('info', 'NATS重连测试页面已加载');
+            log('info', '使用说明:');
+            log('info', '1. 配置NATS服务器URL');
+            log('info', '2. 点击"连接"建立连接');
+            log('info', '3. 停止NATS服务器来测试重连功能');
+            log('info', '4. 观察重连日志和状态变化');
+        });
+    </script>
+</body>
+</html> 

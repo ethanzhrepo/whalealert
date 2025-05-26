@@ -1,0 +1,55 @@
+# Notification Bot 配置文件示例
+# 复制此文件为 config.yml 并修改相应配置
+
+# NATS 消息队列配置
+nats:
+  enabled: true
+  servers:
+    - 'nats://localhost:4222'
+  subject: 'messages.notification'  # 监听的通知subject
+
+# Telegram Bot 配置
+telegram:
+  bot_token: 'YOUR_BOT_TOKEN_HERE'  # 从 @BotFather 获取的 Bot Token
+  target_groups:  # 目标群组配置
+    - chat_id: -1001234567890  # 群组ID（负数）- 替换为实际群组ID
+      name: '主要信号群'
+      enabled: true
+    - chat_id: -1001234567891  # 可以配置多个群组
+      name: '测试群'
+      enabled: false  # 设置为false禁用此群组
+  
+  # 消息格式配置
+  message_format:
+    include_score: true  # 是否包含评分
+    include_reason: true  # 是否包含分析理由
+    include_author: true  # 是否@原作者
+    include_source: true  # 是否包含来源群组
+    # include_symbols: true  # 是否包含相关币种符号
+    max_text_length: 500  # 引用文本的最大长度
+
+# 过滤配置
+filters:
+  min_score_threshold: 0.3  # 最低评分阈值（绝对值），评分范围-1到1，低于此绝对值不发送
+  sentiment_filter:  # 情绪过滤
+    - '利多'
+    - '利空'
+    # - '中性'  # 注释掉表示不发送中性消息
+
+# 限流配置
+rate_limit:
+  enabled: true
+  max_messages_per_minute: 10  # 每分钟最大消息数
+  cooldown_seconds: 3  # 消息间隔秒数
+
+# 日志配置
+logging:
+  level: 'INFO'  # DEBUG, INFO, WARNING, ERROR
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  file: 'notification.log'  # 日志文件路径，留空则只输出到控制台
+
+# 错误处理配置
+error_handling:
+  retry_attempts: 3  # 发送失败重试次数
+  retry_delay: 5  # 重试间隔秒数
+  fallback_enabled: true  # 是否启用降级处理 

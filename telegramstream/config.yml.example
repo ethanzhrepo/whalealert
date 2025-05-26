@@ -1,0 +1,40 @@
+# Telegram 监控程序配置文件示例
+# 复制此文件为 config.yml 并填入您的实际配置
+
+telegram:
+  # Telegram API 配置 (从 https://my.telegram.org 获取)
+  api_id: 'your_api_id'  # 例如: 12345678
+  api_hash: 'your_api_hash'  # 例如: 'abcdef1234567890abcdef1234567890'
+  phone: 'your_phone_number'  # 例如: '+8613812345678'
+  session: 'telegram_monitor'  # 会话文件名
+
+# 监控配置 (通过 python main.py config 自动生成)
+monitoring:
+  groups: []
+  channels: []
+
+# NATS 消息队列配置
+nats:
+  enabled: false  # 是否启用 NATS
+  servers: 
+    - 'nats://localhost:4222'  # NATS 服务器地址
+  subject: 'messages.stream'  # 消息主题
+
+# 高级配置
+advanced:
+  # 消息过滤器
+  filters:
+    min_message_length: 0  # 最小消息长度
+    ignore_bots: false  # 是否忽略机器人消息
+    keywords:  # 关键词过滤 (包含任一关键词才处理)
+      - "trading"
+      - "crypto"
+      - "pump"
+      - "signal"
+  
+  # 数据提取配置
+  extraction:
+    extract_urls: true  # 是否提取 URL
+    extract_addresses: true  # 是否提取区块链地址
+    extract_symbols: true  # 是否提取代币符号
+    sentiment_analysis: true  # 是否进行情感分析 

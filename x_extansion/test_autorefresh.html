@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动刷新功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f8fa;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #1da1f2;
+            margin-bottom: 24px;
+        }
+        
+        .info-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #1da1f2;
+            font-family: monospace;
+        }
+        
+        .status-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #e8f5e8;
+            border-radius: 8px;
+            border-left: 4px solid #17bf63;
+        }
+        
+        .warning-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffad1f;
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #1da1f2;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #1da1f2;
+        }
+        
+        .instructions ol {
+            margin-bottom: 0;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .highlight {
+            background: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        .code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .code:hover {
+            background: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 自动刷新功能测试</h1>
+        
+        <div class="info-section">
+            <h3>页面信息</h3>
+            <div class="info-item">
+                <span class="info-label">当前URL:</span>
+                <span class="info-value" id="currentUrl"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">页面加载时间:</span>
+                <span class="info-value" id="loadTime"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">刷新计数:</span>
+                <span class="info-value" id="refreshCount"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">会话ID:</span>
+                <span class="info-value" id="sessionId"></span>
+            </div>
+        </div>
+        
+        <div class="status-section">
+            <h3>✅ 测试页面已加载</h3>
+            <p>此页面用于测试x_extension的自动刷新功能。页面每次刷新时会更新加载时间和刷新计数。</p>
+        </div>
+        
+        <div class="warning-section">
+            <h3>⚠️ 注意事项</h3>
+            <ul>
+                <li>自动刷新功能只在<strong>被监控的Twitter列表页面</strong>生效</li>
+                <li>此测试页面本身不会触发自动刷新</li>
+                <li>需要将此页面URL添加到监控列表中进行测试</li>
+                <li>建议设置较短的刷新间隔（如10秒）以便观察效果</li>
+            </ul>
+        </div>
+        
+        <div class="instructions">
+            <h3>🧪 测试步骤</h3>
+            <ol>
+                <li>复制当前页面的URL: <span class="code" id="urlToCopy" title="点击复制"></span></li>
+                <li>打开x_extension扩展配置面板</li>
+                <li>在<span class="highlight">监控列表</span>中添加此页面URL</li>
+                <li>在<span class="highlight">自动刷新设置</span>中启用自动刷新</li>
+                <li>设置刷新间隔为<span class="highlight">10秒</span>（测试用）</li>
+                <li>保存配置并启用监控</li>
+                <li>观察页面是否在10秒后自动刷新</li>
+                <li>检查<span class="highlight">刷新计数</span>是否递增</li>
+            </ol>
+        </div>
+        
+        <div class="info-section">
+            <h3>📊 刷新历史</h3>
+            <div id="refreshHistory">
+                <div>首次加载 - <span id="firstLoadTime"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 生成会话ID
+        function generateSessionId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+        
+        // 获取或创建会话ID
+        function getSessionId() {
+            let sessionId = sessionStorage.getItem('autorefresh_session_id');
+            if (!sessionId) {
+                sessionId = generateSessionId();
+                sessionStorage.setItem('autorefresh_session_id', sessionId);
+            }
+            return sessionId;
+        }
+        
+        // 获取刷新计数
+        function getRefreshCount() {
+            const count = parseInt(localStorage.getItem('autorefresh_count') || '0');
+            return count;
+        }
+        
+        // 增加刷新计数
+        function incrementRefreshCount() {
+            const count = getRefreshCount() + 1;
+            localStorage.setItem('autorefresh_count', count.toString());
+            return count;
+        }
+        
+        // 页面初始化
+        function initPage() {
+            const now = new Date();
+            const currentUrl = window.location.href;
+            const sessionId = getSessionId();
+            
+            // 检查是否是刷新
+            const isRefresh = performance.navigation.type === performance.navigation.TYPE_RELOAD;
+            
+            let refreshCount = getRefreshCount();
+            if (isRefresh) {
+                refreshCount = incrementRefreshCount();
+            }
+            
+            // 更新页面信息
+            document.getElementById('currentUrl').textContent = currentUrl;
+            document.getElementById('loadTime').textContent = now.toLocaleString();
+            document.getElementById('refreshCount').textContent = refreshCount;
+            document.getElementById('sessionId').textContent = sessionId;
+            document.getElementById('urlToCopy').textContent = currentUrl;
+            document.getElementById('firstLoadTime').textContent = now.toLocaleString();
+            
+            // 添加复制URL功能
+            document.getElementById('urlToCopy').addEventListener('click', function() {
+                navigator.clipboard.writeText(currentUrl).then(function() {
+                    alert('URL已复制到剪贴板');
+                }).catch(function() {
+                    alert('复制失败，请手动复制URL');
+                });
+            });
+            
+            console.log('自动刷新测试页面已加载');
+            console.log('会话ID:', sessionId);
+            console.log('刷新次数:', refreshCount);
+            console.log('是否为刷新:', isRefresh);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

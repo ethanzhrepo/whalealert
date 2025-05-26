@@ -1,0 +1,15 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆形 -->
+  <circle cx="64" cy="64" r="60" fill="#1da1f2" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- Twitter鸟图标简化版 -->
+  <path d="M45 45 Q50 40 55 45 Q60 50 65 45 Q70 40 75 45 Q80 50 85 55 Q80 60 75 65 Q70 70 65 75 Q60 80 55 75 Q50 70 45 65 Q40 60 45 55 Z" fill="#ffffff"/>
+  
+  <!-- 监控符号 - 眼睛 -->
+  <circle cx="64" cy="64" r="15" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <circle cx="64" cy="64" r="6" fill="#ffffff"/>
+  
+  <!-- 信号波纹 -->
+  <circle cx="64" cy="64" r="25" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.6"/>
+  <circle cx="64" cy="64" r="35" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.3"/>
+</svg> 
