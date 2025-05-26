@@ -120,7 +120,7 @@ class TwitterContentMonitor {
 
       // 检查当前URL是否匹配监控列表
       const isMonitoredList = config.monitoredLists.some(listUrl => {
-        return this.currentUrl.includes(listUrl) || listUrl.includes(this.currentUrl.split('?')[0]);
+        return this.isUrlMatch(this.currentUrl, listUrl);
       });
 
       if (isMonitoredList) {
@@ -278,7 +278,7 @@ class TwitterContentMonitor {
       }
 
       return config.monitoredLists.some(listUrl => {
-        return this.currentUrl.includes(listUrl) || listUrl.includes(this.currentUrl.split('?')[0]);
+        return this.isUrlMatch(this.currentUrl, listUrl);
       });
     } catch (error) {
       console.error('检查页面监控状态失败:', error);
@@ -577,6 +577,61 @@ class TwitterContentMonitor {
       hash = hash & hash;
     }
     return Math.abs(hash).toString();
+  }
+
+  isUrlMatch(currentUrl, configuredUrl) {
+    /**
+     * 严格的URL匹配逻辑
+     * 只有当前URL完全匹配配置的列表URL时才返回true
+     */
+    try {
+      // 移除URL中的查询参数和片段标识符进行比较
+      const cleanCurrentUrl = currentUrl.split('?')[0].split('#')[0];
+      const cleanConfiguredUrl = configuredUrl.split('?')[0].split('#')[0];
+      
+      // 移除末尾的斜杠进行比较
+      const normalizeUrl = (url) => url.replace(/\/$/, '');
+      
+      const normalizedCurrentUrl = normalizeUrl(cleanCurrentUrl);
+      const normalizedConfiguredUrl = normalizeUrl(cleanConfiguredUrl);
+      
+      // 完全匹配
+      if (normalizedCurrentUrl === normalizedConfiguredUrl) {
+        return true;
+      }
+      
+      // 检查是否是Twitter列表URL的变体
+      // 支持的格式：
+      // https://twitter.com/i/lists/123456789
+      // https://x.com/i/lists/123456789
+      // https://twitter.com/username/lists/listname
+      // https://x.com/username/lists/listname
+      
+      const twitterListPattern = /^https?:\/\/(twitter\.com|x\.com)\/(.+)$/;
+      const currentMatch = normalizedCurrentUrl.match(twitterListPattern);
+      const configuredMatch = normalizedConfiguredUrl.match(twitterListPattern);
+      
+      if (currentMatch && configuredMatch) {
+        // 提取路径部分进行比较
+        const currentPath = currentMatch[2];
+        const configuredPath = configuredMatch[2];
+        
+        // 路径完全匹配
+        if (currentPath === configuredPath) {
+          return true;
+        }
+        
+        // 检查是否是同一个列表的不同域名 (twitter.com vs x.com)
+        if (currentPath === configuredPath) {
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('URL匹配检查失败:', error);
+      return false;
+    }
   }
 }
 

@@ -228,8 +228,7 @@ class TwitterMonitorBackground {
       }
       
       return config.monitoredLists.some(listUrl => {
-        // 简单的URL匹配
-        return url.includes(listUrl) || listUrl.includes(url.split('?')[0]);
+        return this.isUrlMatch(url, listUrl);
       });
     } catch (error) {
       console.error('检查URL匹配失败:', error);
@@ -244,6 +243,56 @@ class TwitterMonitorBackground {
         this.monitoringTabs.delete(tabId);
       });
     });
+  }
+
+  isUrlMatch(currentUrl, configuredUrl) {
+    /**
+     * 严格的URL匹配逻辑
+     * 只有当前URL完全匹配配置的列表URL时才返回true
+     */
+    try {
+      // 移除URL中的查询参数和片段标识符进行比较
+      const cleanCurrentUrl = currentUrl.split('?')[0].split('#')[0];
+      const cleanConfiguredUrl = configuredUrl.split('?')[0].split('#')[0];
+      
+      // 移除末尾的斜杠进行比较
+      const normalizeUrl = (url) => url.replace(/\/$/, '');
+      
+      const normalizedCurrentUrl = normalizeUrl(cleanCurrentUrl);
+      const normalizedConfiguredUrl = normalizeUrl(cleanConfiguredUrl);
+      
+      // 完全匹配
+      if (normalizedCurrentUrl === normalizedConfiguredUrl) {
+        return true;
+      }
+      
+      // 检查是否是Twitter列表URL的变体
+      // 支持的格式：
+      // https://twitter.com/i/lists/123456789
+      // https://x.com/i/lists/123456789
+      // https://twitter.com/username/lists/listname
+      // https://x.com/username/lists/listname
+      
+      const twitterListPattern = /^https?:\/\/(twitter\.com|x\.com)\/(.+)$/;
+      const currentMatch = normalizedCurrentUrl.match(twitterListPattern);
+      const configuredMatch = normalizedConfiguredUrl.match(twitterListPattern);
+      
+      if (currentMatch && configuredMatch) {
+        // 提取路径部分进行比较
+        const currentPath = currentMatch[2];
+        const configuredPath = configuredMatch[2];
+        
+        // 路径完全匹配
+        if (currentPath === configuredPath) {
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('URL匹配检查失败:', error);
+      return false;
+    }
   }
 }
 

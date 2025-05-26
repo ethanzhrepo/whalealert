@@ -54,6 +54,22 @@
   - `https://x.com/i/lists/123456789`
   - `https://twitter.com/username/lists/listname`
 
+#### URL匹配规则
+扩展使用严格的URL匹配逻辑，确保只有完全匹配的列表页面才会触发监控：
+
+- **完全匹配**: URL路径必须完全相同
+- **忽略查询参数**: `?param=value` 等参数会被忽略
+- **忽略片段标识符**: `#section` 等片段会被忽略
+- **忽略末尾斜杠**: 有无末尾斜杠都视为相同
+- **域名兼容**: 支持 `twitter.com` 和 `x.com` 互相匹配
+- **拒绝部分匹配**: 不会因为URL包含列表ID就匹配
+
+**匹配示例**:
+- ✅ `https://twitter.com/i/lists/123456789` ↔ `https://x.com/i/lists/123456789`
+- ✅ `https://twitter.com/i/lists/123456789?tab=members` ↔ `https://twitter.com/i/lists/123456789`
+- ❌ `https://twitter.com/i/lists/123` ↔ `https://twitter.com/i/lists/123456789`
+- ❌ `https://twitter.com/home` ↔ `https://twitter.com/i/lists/123456789`
+
 ## 消息格式
 
 扩展推送到NATS的消息格式与telegramstream兼容：
@@ -188,6 +204,13 @@ nats:
 4. 停止NATS服务器观察重连行为
 5. 重启NATS服务器验证自动恢复
 
+## 测试URL匹配
+
+1. 打开 `test_url_matching.html` 测试页面
+2. 查看自动测试用例结果
+3. 使用手动测试功能验证特定URL
+4. 确保只有完全匹配的列表URL才会触发监控
+
 ## 自动刷新功能
 
 ### 功能说明
@@ -253,6 +276,12 @@ nats:
    - 验证刷新间隔设置是否合理
    - 查看控制台日志了解刷新状态
 
+6. **URL匹配问题**
+   - 使用 `test_url_matching.html` 测试URL匹配逻辑
+   - 确保配置的列表URL格式正确
+   - 检查是否存在多余的查询参数或路径
+   - 验证当前页面URL与配置列表的完全匹配
+
 ### 调试方法
 
 1. 打开Chrome开发者工具
@@ -290,6 +319,19 @@ x_extansion/
 4. **性能影响**: 监控功能会消耗一定的CPU和内存资源
 
 ## 更新日志
+
+### v1.2.0
+- **修复**: 严格的URL匹配逻辑，防止在非监控页面触发抓取
+- **新增**: URL匹配测试页面 (`test_url_matching.html`)
+- **改进**: 支持twitter.com和x.com域名互相匹配
+- **优化**: 忽略查询参数和片段标识符的URL比较
+
+### v1.1.0
+- **新增**: NATS自动重连功能，支持指数退避算法
+- **新增**: 自动刷新功能，可配置间隔（最低10秒）
+- **新增**: 实时连接状态监控和可视化指示器
+- **新增**: 重连测试页面 (`test_reconnect.html`)
+- **新增**: 自动刷新测试页面 (`test_autorefresh.html`)
 
 ### v1.0.0
 - 初始版本发布

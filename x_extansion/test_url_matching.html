@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL匹配逻辑测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f8fa;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #1da1f2;
+            margin-bottom: 24px;
+        }
+        
+        .test-section {
+            margin-bottom: 32px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .test-case {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #e1e8ed;
+        }
+        
+        .test-case.pass {
+            border-left-color: #17bf63;
+        }
+        
+        .test-case.fail {
+            border-left-color: #e0245e;
+        }
+        
+        .test-input {
+            font-family: monospace;
+            font-size: 12px;
+            color: #657786;
+            margin-bottom: 8px;
+        }
+        
+        .test-result {
+            font-weight: 600;
+        }
+        
+        .test-result.pass {
+            color: #17bf63;
+        }
+        
+        .test-result.fail {
+            color: #e0245e;
+        }
+        
+        .input-section {
+            margin-bottom: 24px;
+        }
+        
+        .input-group {
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background: #1da1f2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #1991db;
+        }
+        
+        .summary {
+            text-align: center;
+            padding: 16px;
+            background: #e8f5e8;
+            border-radius: 8px;
+            margin-top: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 URL匹配逻辑测试</h1>
+        
+        <div class="input-section">
+            <h3>手动测试</h3>
+            <div class="input-group">
+                <label>当前URL:</label>
+                <input type="text" id="currentUrl" placeholder="https://twitter.com/i/lists/123456789">
+            </div>
+            <div class="input-group">
+                <label>配置的列表URL:</label>
+                <input type="text" id="configuredUrl" placeholder="https://twitter.com/i/lists/123456789">
+            </div>
+            <button onclick="testManual()">测试匹配</button>
+            <div id="manualResult" style="margin-top: 12px;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>自动测试用例</h3>
+            <div id="testResults"></div>
+        </div>
+        
+        <div id="summary" class="summary" style="display: none;">
+            <h3>测试总结</h3>
+            <div id="summaryText"></div>
+        </div>
+    </div>
+
+    <script>
+        // 复制URL匹配逻辑
+        function isUrlMatch(currentUrl, configuredUrl) {
+            try {
+                // 移除URL中的查询参数和片段标识符进行比较
+                const cleanCurrentUrl = currentUrl.split('?')[0].split('#')[0];
+                const cleanConfiguredUrl = configuredUrl.split('?')[0].split('#')[0];
+                
+                // 移除末尾的斜杠进行比较
+                const normalizeUrl = (url) => url.replace(/\/$/, '');
+                
+                const normalizedCurrentUrl = normalizeUrl(cleanCurrentUrl);
+                const normalizedConfiguredUrl = normalizeUrl(cleanConfiguredUrl);
+                
+                // 完全匹配
+                if (normalizedCurrentUrl === normalizedConfiguredUrl) {
+                    return true;
+                }
+                
+                // 检查是否是Twitter列表URL的变体
+                const twitterListPattern = /^https?:\/\/(twitter\.com|x\.com)\/(.+)$/;
+                const currentMatch = normalizedCurrentUrl.match(twitterListPattern);
+                const configuredMatch = normalizedConfiguredUrl.match(twitterListPattern);
+                
+                if (currentMatch && configuredMatch) {
+                    // 提取路径部分进行比较
+                    const currentPath = currentMatch[2];
+                    const configuredPath = configuredMatch[2];
+                    
+                    // 路径完全匹配
+                    if (currentPath === configuredPath) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('URL匹配检查失败:', error);
+                return false;
+            }
+        }
+
+        // 测试用例
+        const testCases = [
+            // 应该匹配的情况
+            {
+                current: 'https://twitter.com/i/lists/123456789',
+                configured: 'https://twitter.com/i/lists/123456789',
+                expected: true,
+                description: '完全相同的URL'
+            },
+            {
+                current: 'https://twitter.com/i/lists/123456789?param=value',
+                configured: 'https://twitter.com/i/lists/123456789',
+                expected: true,
+                description: '当前URL有查询参数'
+            },
+            {
+                current: 'https://twitter.com/i/lists/123456789',
+                configured: 'https://twitter.com/i/lists/123456789/',
+                expected: true,
+                description: '配置URL有末尾斜杠'
+            },
+            {
+                current: 'https://x.com/i/lists/123456789',
+                configured: 'https://twitter.com/i/lists/123456789',
+                expected: true,
+                description: '不同域名但相同路径'
+            },
+            {
+                current: 'https://twitter.com/username/lists/listname',
+                configured: 'https://twitter.com/username/lists/listname',
+                expected: true,
+                description: '用户自定义列表'
+            },
+            
+            // 不应该匹配的情况
+            {
+                current: 'https://twitter.com/i/lists/123456789',
+                configured: 'https://twitter.com/i/lists/987654321',
+                expected: false,
+                description: '不同的列表ID'
+            },
+            {
+                current: 'https://twitter.com/home',
+                configured: 'https://twitter.com/i/lists/123456789',
+                expected: false,
+                description: '主页 vs 列表页'
+            },
+            {
+                current: 'https://twitter.com/search?q=bitcoin',
+                configured: 'https://twitter.com/i/lists/123456789',
+                expected: false,
+                description: '搜索页 vs 列表页'
+            },
+            {
+                current: 'https://twitter.com/username',
+                configured: 'https://twitter.com/i/lists/123456789',
+                expected: false,
+                description: '用户主页 vs 列表页'
+            },
+            {
+                current: 'https://twitter.com/i/lists/123',
+                configured: 'https://twitter.com/i/lists/123456789',
+                expected: false,
+                description: '部分匹配的列表ID'
+            },
+            {
+                current: 'https://twitter.com/username/lists/listname',
+                configured: 'https://twitter.com/username/lists/othername',
+                expected: false,
+                description: '不同的用户列表名'
+            },
+            {
+                current: 'https://facebook.com/groups/123456789',
+                configured: 'https://twitter.com/i/lists/123456789',
+                expected: false,
+                description: '完全不同的网站'
+            }
+        ];
+
+        function runTests() {
+            const resultsContainer = document.getElementById('testResults');
+            let passCount = 0;
+            let totalCount = testCases.length;
+
+            testCases.forEach((testCase, index) => {
+                const result = isUrlMatch(testCase.current, testCase.configured);
+                const passed = result === testCase.expected;
+                
+                if (passed) passCount++;
+
+                const testDiv = document.createElement('div');
+                testDiv.className = `test-case ${passed ? 'pass' : 'fail'}`;
+                testDiv.innerHTML = `
+                    <div class="test-input">
+                        <strong>当前URL:</strong> ${testCase.current}<br>
+                        <strong>配置URL:</strong> ${testCase.configured}<br>
+                        <strong>描述:</strong> ${testCase.description}
+                    </div>
+                    <div class="test-result ${passed ? 'pass' : 'fail'}">
+                        ${passed ? '✅ 通过' : '❌ 失败'} - 
+                        期望: ${testCase.expected}, 实际: ${result}
+                    </div>
+                `;
+                resultsContainer.appendChild(testDiv);
+            });
+
+            // 显示总结
+            const summary = document.getElementById('summary');
+            const summaryText = document.getElementById('summaryText');
+            summary.style.display = 'block';
+            summaryText.innerHTML = `
+                <strong>测试完成!</strong><br>
+                通过: ${passCount}/${totalCount} (${Math.round(passCount/totalCount*100)}%)
+            `;
+        }
+
+        function testManual() {
+            const currentUrl = document.getElementById('currentUrl').value;
+            const configuredUrl = document.getElementById('configuredUrl').value;
+            const resultDiv = document.getElementById('manualResult');
+
+            if (!currentUrl || !configuredUrl) {
+                resultDiv.innerHTML = '<span style="color: #e0245e;">请输入两个URL</span>';
+                return;
+            }
+
+            const result = isUrlMatch(currentUrl, configuredUrl);
+            resultDiv.innerHTML = `
+                <strong>匹配结果:</strong> 
+                <span style="color: ${result ? '#17bf63' : '#e0245e'};">
+                    ${result ? '✅ 匹配' : '❌ 不匹配'}
+                </span>
+            `;
+        }
+
+        // 页面加载时运行测试
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html> 
