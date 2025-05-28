@@ -119,6 +119,16 @@ llm:
     temperature: 0.1
 ```
 
+**使用DeepSeek：**
+```yaml
+llm:
+  provider: 'deepseek'
+  deepseek:
+    api_key: 'your-deepseek-api-key'
+    model: 'deepseek-chat'  # 支持: deepseek-chat, deepseek-reasoner
+    temperature: 0.1
+```
+
 #### Agent配置
 ```yaml
 agents:

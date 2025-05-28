@@ -22,6 +22,7 @@ from langchain.schema import BaseMessage, HumanMessage
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
+from langchain_deepseek import ChatDeepSeek
 
 # 导入去重模块
 from deduplication import get_deduplicator, cleanup_deduplicator, ensure_model_available
@@ -117,6 +118,16 @@ class LLMManager:
                 temperature=anthropic_config.get('temperature', 0.1),
                 max_tokens=anthropic_config.get('max_tokens', 1000),
                 timeout=anthropic_config.get('timeout', 30)
+            )
+        
+        elif self.provider == 'deepseek':
+            deepseek_config = self.config.get('deepseek', {})
+            return ChatDeepSeek(
+                api_key=deepseek_config.get('api_key'),
+                model=deepseek_config.get('model', 'deepseek-chat'),
+                temperature=deepseek_config.get('temperature', 0.1),
+                max_tokens=deepseek_config.get('max_tokens', 1000),
+                timeout=deepseek_config.get('timeout', 30)
             )
         
         else:
@@ -229,7 +240,7 @@ class SentimentAnalysisAgent(BaseAgent):
 
 {{
   "情绪": "利多 / 利空 / 中性（三选一）",
-  "理由": "一句话解释为什么你判断为这种情绪",
+  "理由": "请解释为什么你判断为这种情绪，理由不超过300字。",
   "情绪评分": 数值（范围从 -1.0 到 1.0，越接近 1 表示越利多，越接近 -1 表示越利空）
 }}
 

@@ -102,7 +102,7 @@ install_python_deps() {
     
     # 安装LLM提供商支持
     log_info "安装LLM提供商支持..."
-    $PIP_CMD install langchain-ollama langchain-openai langchain-anthropic
+    $PIP_CMD install langchain-ollama langchain-openai langchain-anthropic langchain-deepseek
     
     # 安装其他依赖
     log_info "安装其他依赖..."
@@ -287,6 +287,7 @@ show_next_steps() {
     echo "2. 配置LLM提供商 (编辑 config.yml):"
     echo "   - 如果使用OpenAI: 设置 api_key"
     echo "   - 如果使用Anthropic: 设置 api_key"
+    echo "   - 如果使用DeepSeek: 设置 api_key"
     echo "   - 如果使用Ollama: 确保服务运行在 localhost:11434"
     echo ""
     echo "3. 配置消息去重功能 (可选，编辑 config.yml):"

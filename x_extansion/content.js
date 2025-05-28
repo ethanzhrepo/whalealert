@@ -422,14 +422,27 @@ class TwitterContentMonitor {
       const timeElement = tweetElement.querySelector('time');
       const timestamp = timeElement ? new Date(timeElement.getAttribute('datetime')).getTime() : Date.now();
 
-      // 提取推文ID
+      // 提取推文ID和用户名
       const linkElement = tweetElement.querySelector('a[href*="/status/"]');
       const tweetId = linkElement ? linkElement.href.match(/\/status\/(\d+)/)?.[1] : null;
+      
+      // 从链接中提取用户名（更准确的方法）
+      const tweetUrl = linkElement ? linkElement.href : null;
+      let actualUsername = username;
+      if (tweetUrl) {
+        const usernameFromUrl = tweetUrl.match(/https?:\/\/(?:www\.)?(?:twitter\.com|x\.com)\/([^\/]+)\//)?.[1];
+        if (usernameFromUrl) {
+          actualUsername = usernameFromUrl;
+        }
+      }
 
       // 如果没有文本内容或ID，跳过
       if (!text.trim() || !tweetId) {
         return null;
       }
+
+      // 构建推文URL
+      const tweetDirectUrl = `https://x.com/${actualUsername}/status/${tweetId}`;
 
       // 提取媒体信息
       const mediaElements = tweetElement.querySelectorAll('[data-testid="tweetPhoto"], [data-testid="videoPlayer"]');
@@ -448,8 +461,9 @@ class TwitterContentMonitor {
       return {
         id: tweetId,
         text: text,
-        username: username,
+        username: actualUsername,
         timestamp: timestamp,
+        tweet_url: tweetDirectUrl,
         media: media,
         urls: urls
       };
@@ -498,6 +512,7 @@ class TwitterContentMonitor {
         date: tweetData.timestamp,
         text: tweetData.text,
         raw_text: tweetData.text,
+        tweet_url: tweetData.tweet_url,
         media: tweetData.media,
         urls: tweetData.urls,
         extracted_data: extractedData

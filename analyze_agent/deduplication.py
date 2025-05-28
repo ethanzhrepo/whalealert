@@ -144,7 +144,7 @@ class MessageDeduplicator:
                     vectors = np.array([record.vector for record in self.message_records])
                     self.faiss_index.add(vectors.astype(np.float32))
                     logger.debug(f"从缓存重建FAISS索引完成，包含 {len(self.message_records)} 个向量")
-                    
+                
                     # 重建映射
                     self.message_index_map = {
                         record.message_id: i for i, record in enumerate(self.message_records)
@@ -277,7 +277,7 @@ class MessageDeduplicator:
         # 模型应该在初始化时已经加载，这里只做安全检查
         if self.model is None:
             logger.warning("模型未加载，尝试重新加载...")
-            await self._load_model()
+        await self._load_model()
         
         # 提取文本
         text = self._extract_text(message_data)
@@ -403,7 +403,7 @@ class MessageDeduplicator:
             # 模型应该在初始化时已经加载，这里只做安全检查
             if self.model is None:
                 logger.warning("模型未加载，尝试重新加载...")
-                await self._load_model()
+            await self._load_model()
             
             # 提取信息
             text = self._extract_text(message_data)

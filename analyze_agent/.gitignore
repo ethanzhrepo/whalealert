@@ -10,3 +10,5 @@ __pycache__/
 *.pyzwz
 =*
 *.pkl
+*_UPDATE.md
+*_SUMMARY.md

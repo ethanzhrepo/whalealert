@@ -12,8 +12,11 @@ Telegram通知机器人，用于接收analyze_agent的分析结果并发送到�
 - 🔄 **错误重试**: 自动重试失败的消息发送
 - 📊 **丰富格式**: 支持HTML格式、表情符号、@用户等
 - 💰 **币种显示**: 自动识别并显示相关数字货币符号
+- 🔗 **Twitter链接**: 自动为Twitter来源消息添加原文链接
 
 ## 消息格式示例
+
+### Telegram消息
 
 ```
 🚀 分析结果: 利多
@@ -25,6 +28,21 @@ Telegram通知机器人，用于接收analyze_agent的分析结果并发送到�
 <pre>BTC突破10万美元！牛市来了！</pre>
 
 👤 @crypto_trader
+⏰ 14:30:25
+```
+
+### Twitter消息
+
+```
+📈 分析结果: 利多
+📊 评分: 0.80
+💡 理由: 提到价格上涨和买入机会，表现出积极的情绪
+🐦 来源: Twitter - 列表 123456789
+👤 用户: elonmusk (@elonmusk)
+🔗 查看推文 [可点击链接]
+
+<pre>Dogecoin to the moon! 🚀🌙</pre>
+
 ⏰ 14:30:25
 ```
 
@@ -226,7 +244,12 @@ error_handling:
    ./run.sh --test-bot
    ```
 
-4. **查看日志**:
+4. **测试Twitter链接功能**:
+   ```bash
+   python3 test_twitter_links.py
+   ```
+
+5. **查看日志**:
    ```bash
    tail -f notification.log
    ```
