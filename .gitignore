@@ -191,3 +191,9 @@ docker-compose.override.yml
 local/
 dev/
 debug/
+
+# Assets (if needed, uncomment the line below)
+# assets/
+
+# Scripts
+commit.sh
